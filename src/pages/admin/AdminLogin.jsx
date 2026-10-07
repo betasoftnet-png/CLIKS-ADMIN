@@ -35,7 +35,7 @@ const AdminLogin = () => {
             const data = await adminLogin(email, password);
             
             // Strict role asserting on successful session hydration
-            if (data.user && data.user.role === 'admin') {
+            if (data.user && (data.user.role === 'admin' || data.user.role === 'ADMIN')) {
                 navigate('/admin/dashboard');
             } else {
                 setError('Access Violation: Lacks Platform Control authorization.');
