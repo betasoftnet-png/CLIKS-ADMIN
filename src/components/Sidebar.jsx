@@ -1,0 +1,1208 @@
+import React, { useState, useEffect } from 'react';
+import { storageService } from '../services/storageService';
+import { Tooltip } from './common';
+import { isFeatureAllowed, getRequiredPlanForFeature, calculateDaysRemaining } from '../utils/subscriptionUtils';
+
+const ROUTE_FEATURE_MAP = {
+    '/inventory/warehouse': 'multi-warehouse',
+    '/hr/staff': 'payroll-attendance',
+    '/hr/attendance': 'payroll-attendance',
+    '/hr/payroll': 'payroll-attendance',
+    '/finance/accounting': 'accounting',
+    '/finance/gst': 'gst-filings'
+};
+import {
+    LayoutDashboard,
+    Plus,
+    Banknote,
+    ShoppingCart,
+    Users,
+    ArrowDownRight,
+    Package,
+    Layers,
+    MapPin,
+    Calculator,
+    CreditCard,
+    TrendingUp,
+    BarChart3,
+    PercentCircle,
+    UsersRound,
+    Calendar,
+    FileCheck,
+    Megaphone,
+    Smartphone,
+    Truck,
+    Cpu,
+    User,
+    Settings as SettingsIcon,
+    RefreshCw,
+    Split,
+    Gift,
+    Building,
+    Briefcase,
+    Barcode,
+    ChevronDown,
+    ChevronRight,
+    HelpCircle,
+    Receipt,
+    Crown,
+    Monitor,
+    Globe,
+    Sliders,
+    Activity,
+    ShieldAlert,
+    Target,
+    Wallet,
+    LineChart,
+    Cloud,
+    X
+} from 'lucide-react';
+
+import { useLocation, useNavigate } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/auth-context';
+import { useLanguage } from '../context/LanguageContext';
+import { PERMISSIONS, hasAccess } from '../utils/permissions';
+import '../App.css';
+import logoPng from '../assets/cliks6.png';
+import inventoryIconPng from '../assets/image.png';
+import hrIconPng from '../assets/image copy.png';
+import storageLogo from '../assets/storagelogo.png';
+
+const MenuItem = ({ item, isChild = false, activeItem, openMenus, toggleMenu, handleItemClick, isAdmin = false, isSales = false, isSupport = false, user }) => {
+    const { t } = useLanguage();
+    const displayLabel = (t && typeof t === 'function') ? t(item.label, item.label) : item.label;
+
+    if (item.permission && !hasAccess(user, item.permission)) {
+        return null;
+    }
+    
+    const IconComp = item.icon;
+    const isActive = activeItem === item.label;
+    const hasChildren = !!item.children && item.children.length > 0;
+    const isOpen = !!openMenus[item.label];
+    const isChildActive = hasChildren && item.children.some(child => activeItem === child.label);
+
+    const isBetaClub = item.label === 'PARTNER LAUNCH DESK' || item.label === 'CAPITAL MATRIX' || item.label === 'BETA Club';
+    const isCa = item.label === 'FIN-PRO';
+
+    // Dynamic styling variables mapping User Green vs Admin Indigo vs Sales Orange vs Support Blue
+    let primaryColor = isSales ? '#EA580C' : (isAdmin ? '#4F46E5' : (isSupport ? '#3B82F6' : '#1B6B3A'));
+    let activeBg = isSales ? '#FFF7ED' : (isAdmin ? '#EEF2FF' : (isSupport ? '#EFF6FF' : '#DCF2E4'));
+    let activeText = isActive ? '#ffffff' : (isSales ? '#EA580C' : (isAdmin ? '#1E293B' : (isSupport ? '#3B82F6' : '#111827')));
+    let darkTextColor = isSales ? '#9A3412' : (isAdmin ? '#3730A3' : (isSupport ? '#1D4ED8' : '#135029'));
+
+    if (isBetaClub) {
+        primaryColor = '#FFD700'; // Vibrant gold icon (#FFD700)
+        activeBg = '#FFFDF0'; // Soft golden background hover states
+        darkTextColor = '#D97706'; // Warm golden amber for subheader labels
+    } else if (isCa) {
+        primaryColor = '#D4AF37'; // Elegant gold icon (#D4AF37)
+        activeBg = '#FFFDF0'; // Soft golden background hover states
+        activeText = '#D4AF37'; // Set text color explicitly to gold
+        darkTextColor = '#B8860B'; // Warm golden amber for subheader labels
+    }
+
+    let backgroundStyle = 'transparent';
+    if (isActive) {
+        if (isSales) {
+            backgroundStyle = 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)';
+        } else if (isAdmin) {
+            backgroundStyle = 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)';
+        } else if (isSupport) {
+            backgroundStyle = 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)';
+        } else if (isBetaClub) {
+            backgroundStyle = '#FFFDF0';
+            primaryColor = '#FFD700';
+            darkTextColor = '#D97706';
+        } else if (isCa) {
+            primaryColor = '#B8860B';
+            activeBg = 'linear-gradient(135deg, #D4AF37 0%, #AA771C 100%)';
+            darkTextColor = '#B8860B';
+            backgroundStyle = activeBg;
+        } else {
+            backgroundStyle = '#1B6B3A';
+        }
+    }
+
+    if (hasChildren) {
+        return (
+            <div className="sidebar-group" style={{ marginBottom: '6px' }}>
+                <button
+                    className={`sidebar-item has-children ${isOpen ? 'open' : ''} ${isActive ? 'active' : ''}`}
+                    onClick={() => toggleMenu(item.label)}
+                    style={{
+                        background: backgroundStyle,
+                        color: activeText
+                    }}
+                >
+                    <div className="flex items-center gap-3">
+                        {item.label === 'Inventory' ? (
+                            <img src={inventoryIconPng} alt="Inventory" style={{ width: '20px', height: '20px', objectFit: 'contain', display: 'block' }} />
+                        ) : item.label === 'HR' ? (
+                            <img src={hrIconPng} alt="HR" style={{ width: '20px', height: '20px', objectFit: 'contain', display: 'block' }} />
+                        ) : (
+                            <IconComp size={20} style={{ color: (isActive && !isBetaClub && !isCa) ? '#ffffff' : primaryColor }} />
+                        )}
+                        <span className="sidebar-label" style={{ fontWeight: '750', color: darkTextColor }}>{displayLabel}</span>
+                    </div>
+                    {isOpen ? <ChevronDown size={16} style={{ color: darkTextColor }} /> : <ChevronRight size={16} style={{ color: darkTextColor }} />}
+                </button>
+
+                {isOpen && (
+                    <div className="sidebar-submenu pl-4" style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
+                        {item.children.map((child, idx) => (
+                            <MenuItem
+                                key={idx}
+                                item={child}
+                                isChild={true}
+                                activeItem={activeItem}
+                                openMenus={openMenus}
+                                toggleMenu={toggleMenu}
+                                handleItemClick={handleItemClick}
+                                isAdmin={isAdmin}
+                                isSales={isSales}
+                                isSupport={isSupport}
+                                user={user}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <button
+            className={`sidebar-item ${isActive ? 'active' : ''}`}
+            onClick={() => handleItemClick(item.label, item.path)}
+            style={{
+                marginBottom: '6px',
+                paddingLeft: isChild ? '1.2rem' : '0.75rem',
+                fontSize: isChild ? '0.85rem' : '0.92rem',
+                background: backgroundStyle,
+                color: activeText,
+                borderLeft: isChild && isActive ? `3px solid ${isSales ? '#EA580C' : (isAdmin ? '#3730A3' : (isSupport ? '#1D4ED8' : '#135029'))}` : 'none',
+                boxShadow: isActive && (isAdmin || isSales || isSupport) ? `0 4px 12px ${isSales ? 'rgba(234, 88, 12, 0.2)' : (isAdmin ? 'rgba(79, 70, 229, 0.2)' : 'rgba(59, 130, 246, 0.2)')}` : 'none'
+            }}
+        >
+            <div className="flex items-center gap-3">
+                {item.label === 'Inventory' ? (
+                    <img src={inventoryIconPng} alt="Inventory" style={{ width: isChild ? '18px' : '20px', height: isChild ? '18px' : '20px', objectFit: 'contain', display: 'block' }} />
+                ) : item.label === 'HR' ? (
+                    <img src={hrIconPng} alt="HR" style={{ width: isChild ? '18px' : '20px', height: isChild ? '18px' : '20px', objectFit: 'contain', display: 'block' }} />
+                ) : (
+                    <IconComp size={isChild ? 18 : 20} style={{ color: (isActive && !isBetaClub && !isCa) ? '#ffffff' : primaryColor }} />
+                )}
+                <span className="sidebar-label" style={{ fontWeight: isActive ? '800' : 'inherit' }}>{displayLabel}</span>
+            </div>
+        </button>
+    );
+};
+
+const sanitizeTierLabel = (rawTier) => {
+    if (!rawTier) return '';
+    const val = String(rawTier).trim().toUpperCase();
+
+    // Normalize Elite Suite / Book Elite -> ELITE
+    if (val.includes('ELITE')) return 'ELITE';
+
+    // Normalize Fin-Pro Solo / Solo Plan -> SOLO
+    if (val.includes('SOLO')) return 'SOLO';
+
+    // Fallback for other standard tiers
+    if (val.includes('STARTER')) return 'STARTER';
+    if (val.includes('GROWTH')) return 'GROWTH';
+    if (val.includes('FIRM')) return 'FIRM';
+    if (val.includes('BASIC')) return 'BASIC';
+
+    // If no predefined match, take the first word or strip redundant module prefixes
+    return val.replace(/^(FIN-PRO|BOOK|PLD)\s+/i, '').split(' ')[0];
+};
+
+/**
+ * DynamicSubscriptionWidget
+ * Renders the subscription widget in the sidebar, with the exact 2-plan side-by-side layout.
+ */
+export const DynamicSubscriptionWidget = ({ activePlans, plans, user, selectedPlan, planDaysRemaining, onNavigate }) => {
+    const list = activePlans || plans || [];
+
+    if (list.length === 2) {
+        return (
+            <div 
+                onClick={onNavigate}
+                className="w-full bg-[#0b1329] border border-gray-800/80 rounded-2xl p-2.5 shadow-md cursor-pointer hover:border-slate-700 transition-all"
+            >
+                <div className="grid grid-cols-2 gap-2">
+                    {list.slice(0, 2).map((plan, idx) => {
+                        const daysLeft = plan.days_left ?? plan.daysLeft ?? plan.daysRemaining ?? plan.days ?? 358;
+                        const rawMod = String(plan.module || plan.name || plan.moduleTitle || (idx === 0 ? 'BOOK' : 'FIN-PRO')).toUpperCase();
+                        const moduleName = rawMod.includes('FIN') ? 'FIN-PRO' : (rawMod.includes('BOOK') ? 'BOOK' : rawMod);
+                        const tierName = sanitizeTierLabel(plan.tier || plan.plan || plan.tierTitle || (idx === 0 ? 'ELITE' : 'SOLO'));
+
+                        return (
+                            <div
+                                key={plan.id || idx}
+                                className="flex items-center gap-1.5 bg-[#101b38] border border-black/60 rounded-xl px-2 py-1.5 min-w-0"
+                            >
+                                {/* Circular Day Badge */}
+                                <div className="w-8 h-8 min-w-[32px] shrink-0 rounded-full bg-white border-2 border-[#f59e0b] flex flex-col items-center justify-center leading-none shadow-xs">
+                                    <span className="text-[10px] font-black text-[#0b1329] tracking-tight leading-none">
+                                        {daysLeft}
+                                    </span>
+                                    <span className="text-[6px] font-extrabold text-[#0b1329] tracking-tighter uppercase leading-none mt-0.5">
+                                        DAYS
+                                    </span>
+                                </div>
+
+                                {/* Module & Tier Text */}
+                                <div className="flex flex-col justify-center min-w-0">
+                                    <span className="text-[11px] font-black text-white uppercase tracking-tight whitespace-nowrap leading-tight">
+                                        {moduleName}
+                                    </span>
+                                    <span className="text-[10px] font-black text-[#f59e0b] uppercase tracking-wide whitespace-nowrap leading-tight">
+                                        {tierName}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
+    return null;
+};
+
+const Sidebar = ({ isOpen, onClose, onReferralClick }) => {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { selectedPlan, planDaysRemaining, user } = useAuth();
+    const business = user?.business;
+    const { t } = useLanguage();
+
+    // Safely resolve the user's real subscriptions strictly from auth user profile / session (PLD deactivated)
+    const userSubscriptions = React.useMemo(() => {
+        const filterOutPld = (list) => {
+            if (!Array.isArray(list)) return [];
+            return list.filter(item => {
+                if (!item) return false;
+                const mod = String(item.module || item.moduleTitle || item.name || item.category || '').toUpperCase();
+                const tier = String(item.tier || item.tierTitle || item.plan || '').toUpperCase();
+                if (mod === 'PLD' || mod.includes('INVESTOR') || mod.includes('POSTER') || mod.includes('BETACLUB') || mod.includes('PARTNER')) return false;
+                if (tier.includes('INVESTOR') || tier.includes('INNOVATOR') || tier.includes('FOUNDER')) return false;
+                return true;
+            });
+        };
+
+        // Check if active_plans exists on the user object
+        if (Array.isArray(user?.active_plans) && user.active_plans.length > 0) {
+            const valid = user.active_plans.filter(p => p && p.status !== 'inactive' && p.active !== false);
+            const filtered = filterOutPld(valid);
+            if (filtered.length > 0) return filtered;
+        }
+
+        // Check if subscriptions exists on the user object
+        if (Array.isArray(user?.subscriptions) && user.subscriptions.length > 0) {
+            const valid = user.subscriptions.filter(p => p && (p.is_active === true || p.status === 'active'));
+            const filtered = filterOutPld(valid);
+            if (filtered.length > 0) return filtered;
+        }
+
+        // If active_subscriptions object exists on user with active keys
+        if (user?.active_subscriptions && typeof user.active_subscriptions === 'object') {
+            const list = [];
+            const subs = user.active_subscriptions;
+            if (subs.business && (subs.business.active || subs.business.plan)) {
+                list.push({
+                    module: 'BOOK',
+                    tier: subs.business.plan || user?.tier || 'STARTER',
+                    daysRemaining: subs.business.expiryDate ? calculateDaysRemaining(subs.business.expiryDate) : (user?.subscription_days_remaining ?? user?.days_remaining ?? 365)
+                });
+            }
+            if (subs.fin_pro && subs.fin_pro.active === true && subs.fin_pro.plan) {
+                list.push({
+                    module: 'FIN-PRO',
+                    tier: subs.fin_pro.plan,
+                    daysRemaining: subs.fin_pro.expiryDate ? calculateDaysRemaining(subs.fin_pro.expiryDate) : (user?.subscription_days_remaining ?? 365)
+                });
+            }
+            // PLD subscriptions (investor / poster) are removed/deactivated from active subscriptions
+            if (list.length > 0) return list;
+        }
+
+        // If user has a singular plan structure on user or business:
+        const activeModule = user?.active_module || 'BOOK';
+        const planTier = user?.subscription_tier || user?.plan_type || user?.tier || business?.plan || 'STARTER';
+
+        // Return ONLY the actual plan the user owns:
+        return [
+            {
+                module: activeModule,
+                tier: planTier,
+                daysRemaining: user?.days_remaining ?? user?.days_left ?? user?.subscription_days_remaining ?? planDaysRemaining ?? 365
+            }
+        ];
+    }, [user, business, planDaysRemaining]);
+
+    const getActiveItemFromPath = (path) => {
+        if (path.includes('/admin/dashboard')) return 'Admin Console';
+        if (path.includes('/admin/users')) return 'Tenant Matrix';
+        if (path.includes('/admin/sales-team')) return 'Sales Team';
+        if (path.includes('/admin/sales-leads')) return 'Leads Matrix';
+        if (path.includes('/admin/sales')) return 'Platform Sales';
+        if (path.includes('/admin/support-team')) return 'Support Desk';
+        if (path.includes('/sales-portal/dashboard')) return 'Sales Overview';
+        if (path.includes('/sales-portal/leads')) return 'My Prospects';
+        if (path.includes('/support-portal/dashboard')) return 'Support Overview';
+        if (path.includes('/support-portal/faq')) return 'FAQ Registry';
+        if (path.includes('/admin/moderation')) return 'Feed Monitor';
+        if (path.includes('/admin/logs')) return 'Audit Trail';
+        if (path.includes('/admin/settings')) return 'Engine Overrides';
+        if (path.includes('/pos')) return 'POS Billing';
+        if (path.includes('/billing/simple') || path.includes('/billing/records')) return 'Simple Billing';
+        if (path.includes('/dashboard')) return 'Dashboard';
+        if (path.includes('/sales/invoice')) return 'Sales Invoice';
+        if (path.includes('/sales/orders')) return 'Orders';
+        if (path.includes('/sales/delivery')) return 'Delivery';
+        if (path.includes('/sales/customers')) return 'Customers';
+        if (path.includes('/sales/returns')) return 'Returns';
+        if (path.includes('/inventory/products')) return 'Products';
+        if (path.includes('/barcode')) return 'Barcode Gen';
+        if (path.includes('/inventory/stock')) return 'Stock';
+        if (path.includes('/purchases/purchases')) return 'Purchase Invoice';
+        if (path.includes('/purchases/suppliers')) return 'Suppliers';
+        if (path.includes('/inventory/warehouse')) return 'Warehouse';
+        if (path.includes('/finance/purchases/new')) return 'New Purchase';
+        if (path.includes('/finance/purchases/register')) return 'Purchase Register';
+        if (path.includes('/finance/purchases/vendors')) return 'Vendors';
+        if (path.includes('/finance/purchases/bills')) return 'Vendor Bills';
+        if (path.includes('/finance/purchases/details')) return 'Purchase Details';
+        if (path.includes('/finance/purchases/reports')) return 'Purchase Reports';
+        if (path.includes('/finance/accounting')) return 'Accounting';
+        if (path.includes('/payments/transaction')) return 'Transaction';
+        if (path.includes('/payments/segregation')) return 'Segregation';
+        if (path.includes('/payments/split-collect')) return 'Split & Collect';
+        if (path.includes('/payments/people')) return 'People';
+        if (path.includes('/payments/plan')) return 'Planner';
+
+        if (path.includes('/referral')) return 'Refer & Earn';
+        if (path.includes('/payments/bank-accounts')) return 'Bank Accounts';
+        if (path.includes('/finance/expenses')) return 'Expenses';
+        if (path.includes('/reports')) return 'Reports';
+        if (path.includes('/finance/gst')) return 'Tax';
+        if (path.includes('/finance/fintech') || path.includes('/finance/fittech')) return 'FINTECH';
+        if (path.includes('/hr/staff')) return 'Staff';
+        if (path.includes('/hr/attendance')) return 'Attendance';
+        if (path.includes('/hr/payroll')) return 'Payroll';
+        if (path.includes('/marketing')) return 'Marketing';
+        if (path.includes('/ca')) return 'FIN-PRO';
+        if (path.includes('/social/betaclub')) return 'PARTNER LAUNCH DESK';
+        if (path.includes('/social/meetup')) return 'PARTNER LAUNCH DESK';
+        if (path.includes('/social/trading')) return 'Trading docs';
+        if (path.includes('/subscription')) return 'Subscription';
+        if (path.includes('/settings')) return 'Business Settings';
+        if (path.includes('/faq')) return 'Help & Support';
+        return 'Dashboard';
+    };
+
+    // Synchronous Persistent Module Derivation
+    let activeModule = sessionStorage.getItem('active_cliks_module') || 'books';
+    if (location.pathname.startsWith('/social/')) {
+        activeModule = 'social';
+        sessionStorage.setItem('active_cliks_module', 'social');
+    } else if (location.pathname.startsWith('/payments/')) {
+        activeModule = 'payments';
+        sessionStorage.setItem('active_cliks_module', 'payments');
+    } else if (
+        !location.pathname.includes('/admin/') &&
+        !['/settings', '/faq', '/subscription', '/profile', '/referral'].some(p => location.pathname.startsWith(p)) &&
+        location.pathname !== '/'
+    ) {
+        activeModule = 'books';
+        sessionStorage.setItem('active_cliks_module', 'books');
+    }
+
+    const isSocialMode = activeModule === 'social';
+    const isFinanceMode = activeModule === 'payments';
+    const isAdminMode = location.pathname.includes('/admin/');
+    const isSalesAgentMode = location.pathname.includes('/sales-portal/');
+    const isSupportAgentMode = location.pathname.includes('/support-portal/');
+
+    const [activeItem, setActiveItem] = useState(getActiveItemFromPath(location.pathname));
+    const [openMenus, setOpenMenus] = useState({});
+    const [isStorageModalOpen, setIsStorageModalOpen] = useState(false);
+
+    const defaultStorageData = {
+        totalCapacityBytes: 1073741824,
+        totalCapacityFormatted: '1.00 GB',
+        usedBytes: 0,
+        usedFormatted: '0 KB',
+        usedPercent: 0,
+        freeBytes: 1073741824,
+        freeFormatted: '1.00 GB',
+        moduleBreakdown: [
+            { module: 'Audit & Tax (FIN-PRO)', share: '40%', sharePercent: 40, files: 'PDFs, XLS, Signed Certificates', color: '#2563EB', badgeBg: '#EFF6FF' },
+            { module: 'Sales & Purchases', share: '25%', sharePercent: 25, files: 'PDF Invoices, Vendor Bills', color: '#10B981', badgeBg: '#ECFDF5' },
+            { module: 'Expenses', share: '15%', sharePercent: 15, files: 'Receipt Scans, Images', color: '#8B5CF6', badgeBg: '#F5F3FF' },
+            { module: 'HR & Payroll', share: '10%', sharePercent: 10, files: 'ID Documents, Payslip PDFs', color: '#F59E0B', badgeBg: '#FFFBEB' },
+            { module: 'Inventory & Media', share: '10%', sharePercent: 10, files: 'Product Photos, Barcodes', color: '#06B6D4', badgeBg: '#ECFEFF' }
+        ]
+    };
+
+    const [storageData, setStorageData] = useState(defaultStorageData);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchStorage = async () => {
+            try {
+                const data = await storageService.getStorageUsage();
+                if (data && isMounted) {
+                    setStorageData(data);
+                }
+            } catch (e) {
+                // keep default if offline or error
+            }
+        };
+        fetchStorage();
+        return () => { isMounted = false; };
+    }, [isStorageModalOpen]);
+
+    const navigationConfig = {
+        admin: [
+            { label: 'Admin Console', icon: Activity, path: '/admin/dashboard' },
+            { label: 'Tenant Matrix', icon: Users, path: '/admin/users' },
+            {
+                label: 'Sales Control',
+                icon: ShoppingCart,
+                children: [
+                    { label: 'Platform Sales', icon: Receipt, path: '/admin/sales' },
+                    { label: 'Sales Team', icon: Users, path: '/admin/sales-team' },
+                    { label: 'Leads Matrix', icon: FileCheck, path: '/admin/sales-leads' }
+                ]
+            },
+            {
+                label: 'Support Control',
+                icon: HelpCircle,
+                children: [
+                    { label: 'Support Desk', icon: Users, path: '/admin/support-team' }
+                ]
+            },
+            { label: 'Feed Monitor', icon: ShieldAlert, path: '/admin/moderation' },
+            { label: 'Audit Trail', icon: FileCheck, path: '/admin/logs' },
+            { label: 'Engine Overrides', icon: Sliders, path: '/admin/settings' }
+        ],
+        salesAgent: [
+            { label: 'Sales Overview', icon: LayoutDashboard, path: '/sales-portal/dashboard' },
+            { label: 'My Prospects', icon: Users, path: '/sales-portal/leads' }
+        ],
+        supportAgent: [
+            { label: 'Support Overview', icon: LayoutDashboard, path: '/support-portal/dashboard' },
+            { label: 'Help Desk FAQ', icon: HelpCircle, path: '/support-portal/faq' }
+        ],
+        standard: [
+            { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+            {
+                label: 'Finance',
+                icon: Banknote,
+                permission: PERMISSIONS.FINANCE_ALL,
+                children: [
+                    { label: 'Accounting', icon: Calculator, path: '/finance/accounting', permission: PERMISSIONS.FIN_ACC_ALL },
+                    { label: 'Expenses', icon: TrendingUp, path: '/finance/expenses', permission: PERMISSIONS.FIN_EXP_ALL },
+                    { label: 'Tax', icon: PercentCircle, path: '/finance/gst', permission: PERMISSIONS.FIN_TAX_ALL },
+                    { label: 'FINTECH', icon: Cpu, path: '/finance/fintech', permission: PERMISSIONS.FIN_FITTECH }
+                ]
+            },
+            {
+                label: 'Sales',
+                icon: ShoppingCart,
+                permission: PERMISSIONS.SALES_ALL,
+                children: [
+                    { label: 'Sales Invoice', icon: Receipt, path: '/sales/invoice', permission: PERMISSIONS.SALES_SEC_ALL },
+                    { label: 'Customers', icon: Users, path: '/sales/customers', permission: PERMISSIONS.SALES_CUST_ALL }
+                ]
+            },
+            {
+                label: 'Purchases',
+                icon: ShoppingCart,
+                permission: PERMISSIONS.PURCHASES_ALL,
+                children: [
+                    { label: 'Purchase Invoice', icon: ShoppingCart, path: '/purchases/purchases', permission: PERMISSIONS.PUR_SEC_ALL },
+                    { label: 'Suppliers', icon: UsersRound, path: '/purchases/suppliers', permission: PERMISSIONS.PUR_SUPP_ALL }
+                ]
+            },
+            {
+                label: 'Inventory',
+                icon: Package,
+                permission: PERMISSIONS.INVENTORY_ALL,
+                children: [
+                    { label: 'Products', icon: Package, path: '/inventory/products', permission: PERMISSIONS.INV_PRODUCTS },
+                    { label: 'Stock', icon: Layers, path: '/inventory/stock', permission: PERMISSIONS.INV_STOCK },
+                    { label: 'Warehouse', icon: MapPin, path: '/inventory/warehouse', permission: PERMISSIONS.INV_WH_ALL }
+                ]
+            },
+            {
+                label: 'HR',
+                icon: UsersRound,
+                permission: PERMISSIONS.HR_ALL,
+                children: [
+                    { label: 'Staff', icon: UsersRound, path: '/hr/staff', permission: PERMISSIONS.HR_STAFF_ALL },
+                    { label: 'Payroll', icon: FileCheck, path: '/hr/payroll', permission: PERMISSIONS.HR_PAY_ALL }
+                ]
+            },
+            { label: 'POS Billing', icon: Monitor, path: '/pos', permission: PERMISSIONS.POS_BILLING },
+            { label: 'Simple Billing', icon: Receipt, path: '/billing/simple' },
+            { label: 'Reports', icon: BarChart3, path: '/reports', permission: PERMISSIONS.REPORTS },
+            { label: 'Barcode Gen', icon: Barcode, path: '/barcode', permission: PERMISSIONS.BARCODE_GEN },
+            { label: 'Marketing', icon: Megaphone, path: '/marketing', permission: PERMISSIONS.MARKETING }
+        ],
+        social: [
+            { label: 'PARTNER LAUNCH DESK', icon: UsersRound, path: '/social/betaclub', color: '#FFD700' },
+            { label: 'Trading docs', icon: LineChart, path: '/social/trading' }
+        ],
+        financeMode: [
+            { label: 'People', icon: Users, path: '/payments/people' },
+            { label: 'Transaction', icon: CreditCard, path: '/payments/transaction' },
+            { label: 'Segregation', icon: Target, path: '/payments/segregation' },
+            { label: 'Split & Collect', icon: Split, path: '/payments/split-collect' },
+            { label: 'Planner', icon: Calendar, path: '/payments/plan' }
+        ]
+
+    };
+
+    // Smart Expansion Detection
+    React.useEffect(() => {
+        const newItem = getActiveItemFromPath(location.pathname);
+        setActiveItem(newItem);
+
+        const initialOpenMenus = {};
+        const checkAndOpen = (items) => {
+            items.forEach(item => {
+                if (item.children) {
+                    const hasActiveChild = item.children.some(child => {
+                        return child.path && (
+                            location.pathname === child.path ||
+                            (child.path !== '/' && location.pathname.startsWith(child.path + '/')) ||
+                            location.pathname.includes(child.path)
+                        );
+                    });
+                    if (hasActiveChild) {
+                        initialOpenMenus[item.label] = true;
+                    }
+                }
+            });
+        };
+
+        checkAndOpen(navigationConfig.standard);
+        checkAndOpen(navigationConfig.admin);
+
+        setOpenMenus(prev => ({ ...prev, ...initialOpenMenus }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname]);
+
+    const handleItemClick = (label, path) => {
+        setActiveItem(label);
+        
+        if (path) {
+            const activePlan = selectedPlan || user?.tier || 'Free Plan';
+            // Intercept clicks if the user is on the Free Plan (allow essential pages)
+            const allowedFreePlanPages = ['Dashboard', 'Settings', 'Subscription', 'Help & Support', 'Business Settings', 'Profile'];
+            
+            if (selectedPlan === 'Free Plan' && !allowedFreePlanPages.includes(label)) {
+                alert('You are on the Free Plan! Please subscribe to unlock full access to this feature.');
+                navigate('/subscription');
+                return;
+            }
+
+            const featureCode = ROUTE_FEATURE_MAP[path];
+            if (featureCode && !isFeatureAllowed(activePlan, featureCode)) {
+                const requiredPlan = getRequiredPlanForFeature(featureCode);
+                alert(`Your current plan (${activePlan}) does not include access to this feature. Please upgrade to ${requiredPlan} or higher to unlock access.`);
+                navigate('/subscription');
+                return;
+            }
+
+            navigate(path);
+        }
+
+        if (onClose && typeof window !== 'undefined' && window.innerWidth <= 768) {
+            onClose();
+        }
+    };
+
+    const toggleMenu = (label) => {
+        setOpenMenus(prev => ({
+            ...prev,
+            [label]: !prev[label]
+        }));
+    };
+
+
+    return (
+        <aside className={`sidebar ${isOpen ? 'open' : 'collapsed'}`}>
+            <div className="sidebar-header">
+                <div className="brand-logo" style={{ background: 'transparent' }}>
+                    <img src={logoPng} alt="CLIKS Logo" style={{ width: '24px', height: '24px' }} />
+                </div>
+                <h2 className="app-title">CLIKS BUS</h2>
+            </div>
+
+            <div className="sidebar-scroll-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
+                <nav className="sidebar-nav" style={{ flex: 'none', overflowY: 'visible', padding: '0.75rem' }}>
+                    {isAdminMode ? (
+                        <>
+                            <div className="sidebar-nav-header" style={{ padding: '0.5rem 1.25rem', color: '#4F46E5', fontSize: '0.75rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>PLATFORM CONTROL</div>
+                            {navigationConfig.admin.map(item => (
+                                <MenuItem
+                                    key={item.label}
+                                    item={item}
+                                    activeItem={activeItem}
+                                    openMenus={openMenus}
+                                    toggleMenu={toggleMenu}
+                                    handleItemClick={handleItemClick}
+                                    isAdmin={true}
+                                    user={user}
+                                />
+                            ))}
+                        </>
+                    ) : isSalesAgentMode ? (
+                        <>
+                            <div className="sidebar-nav-header" style={{ padding: '0.5rem 1.25rem', color: '#EA580C', fontSize: '0.75rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>SALES DESK</div>
+                            {navigationConfig.salesAgent.map(item => (
+                                <MenuItem
+                                    key={item.label}
+                                    item={item}
+                                    activeItem={activeItem}
+                                    openMenus={openMenus}
+                                    toggleMenu={toggleMenu}
+                                    handleItemClick={handleItemClick}
+                                    isSales={true}
+                                    user={user}
+                                />
+                            ))}
+                        </>
+                    ) : isSupportAgentMode ? (
+                        <>
+                            <div className="sidebar-nav-header" style={{ padding: '0.5rem 1.25rem', color: '#3B82F6', fontSize: '0.75rem', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>SUPPORT DESK</div>
+                            {navigationConfig.supportAgent.map(item => (
+                                <MenuItem
+                                    key={item.label}
+                                    item={item}
+                                    activeItem={activeItem}
+                                    openMenus={openMenus}
+                                    toggleMenu={toggleMenu}
+                                    handleItemClick={handleItemClick}
+                                    isSupport={true}
+                                    user={user}
+                                />
+                            ))}
+                        </>
+                    ) : isSocialMode ? (
+                        <>
+                            {/* No "Social" title - removed per user request */}
+                            <div style={{ paddingTop: '1.5rem' }}>
+                                {navigationConfig.social.map(item => (
+                                    <React.Fragment key={item.label}>
+                                        <MenuItem item={item} activeItem={activeItem} openMenus={openMenus} toggleMenu={toggleMenu} handleItemClick={handleItemClick} user={user} />
+                                        {item.label === 'Trading docs' && (
+                                            <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '10px 0.75rem', opacity: 0.6 }} />
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        </>
+                    ) : isFinanceMode ? (
+                        <>
+                            {/* No "Finance" title - removed per user request */}
+                            {/* Add Transaction CTA - shows on all Finance mode pages */}
+                            <button
+                                onClick={() => {
+                                    handleItemClick('Transaction', '/payments/transaction?reconcile=true');
+                                    if (typeof window !== 'undefined') {
+                                        window.dispatchEvent(new CustomEvent('open-bank-reconciliation'));
+                                        setTimeout(() => {
+                                            window.dispatchEvent(new CustomEvent('open-bank-reconciliation'));
+                                        }, 100);
+                                    }
+                                }}
+                                style={{
+                                    width: 'calc(100% - 2rem)',
+                                    margin: '0.5rem 1rem 1.5rem 1rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.5rem',
+                                    padding: '0.65rem 1rem',
+                                    background: 'linear-gradient(135deg, #1B6B3A 0%, #135029 100%)',
+                                    color: '#FFFFFF',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontWeight: '800',
+                                    fontSize: '0.82rem',
+                                    boxShadow: '0 4px 12px rgba(27, 107, 58, 0.2)',
+                                    transition: 'all 0.2s ease',
+                                    flexShrink: 0
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <Plus size={15} strokeWidth={3} /> {t('addTransaction', 'Add Transaction')}
+                            </button>
+                            {navigationConfig.financeMode.map(item => (
+                                <React.Fragment key={item.label}>
+                                    <MenuItem item={item} activeItem={activeItem} openMenus={openMenus} toggleMenu={toggleMenu} handleItemClick={handleItemClick} user={user} />
+                                </React.Fragment>
+                            ))}
+                        </>
+                    ) : (
+                        <>
+                            {navigationConfig.standard.map(item => (
+                                <React.Fragment key={item.label}>
+                                    <MenuItem item={item} activeItem={activeItem} openMenus={openMenus} toggleMenu={toggleMenu} handleItemClick={handleItemClick} user={user} />
+                                    {item.label === 'Dashboard' && (
+                                        <>
+                                            <button
+                                                onClick={() => handleItemClick('Generate Invoice', '/sales/invoice?create=true')}
+                                                style={{
+                                                    width: '100%', padding: '0.75rem', borderRadius: '10px',
+                                                    background: 'linear-gradient(135deg, #1B6B3A 0%, #135029 100%)',
+                                                    color: 'white', border: 'none', cursor: 'pointer',
+                                                    fontWeight: '800', fontSize: '0.85rem', display: 'flex',
+                                                    alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                    boxShadow: '0 4px 12px rgba(27, 107, 58, 0.2)',
+                                                    marginBottom: '8px',
+                                                    marginTop: '2px'
+                                                }}>
+                                                <Plus size={16} strokeWidth={3} /> {t('generateInvoice', 'Generate Invoice')}
+                                            </button>
+                                            <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0.75rem 10px 0.75rem', opacity: 0.6 }} />
+                                        </>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </>
+                    )}
+                </nav>
+ 
+
+ 
+                <div style={{ flex: 1 }} />
+            </div> {/* END OF sidebar-scroll-container */}
+
+            {/* Refer & Earn Block (Original style) - rendered for Social/Finance mode above the footer */}
+            {(isSocialMode || isFinanceMode) && (
+                <div style={{ padding: '0 1rem', marginBottom: '0.75rem', flexShrink: 0 }}>
+                    <button
+                        onClick={() => {
+                            if (onReferralClick) onReferralClick();
+                            if (onClose && typeof window !== 'undefined' && window.innerWidth <= 768) onClose();
+                        }}
+                        style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.65rem',
+                            padding: '0.60rem',
+                            background: 'transparent',
+                            color: '#6B7280',
+                            borderRadius: '12px',
+                            border: '1px solid transparent',
+                            cursor: 'pointer',
+                            fontWeight: '750',
+                            fontSize: '0.875rem',
+                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                            outline: 'none'
+                        }}
+                        onMouseOver={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)';
+                            e.currentTarget.style.color = '#7C3AED';
+                            e.currentTarget.style.borderColor = '#DDD6FE';
+                            e.currentTarget.style.boxShadow = '0 4px 14px rgba(139, 92, 246, 0.15)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#6B7280';
+                            e.currentTarget.style.borderColor = 'transparent';
+                            e.currentTarget.style.boxShadow = 'none';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                    >
+                        <Gift size={18} strokeWidth={2.5} style={{ color: '#8B5CF6', flexShrink: 0 }} />
+                        <span>{t('referEarn', 'Refer & Earn')}</span>
+                    </button>
+                </div>
+            )}
+
+            {/* Fixed Sidebar Footer - Relocated outside scroll container based on User Specification */}
+            <div style={{
+                padding: '0.75rem 1rem 1rem 1rem',
+                borderTop: '1px solid #F1F5F9',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem',
+                flexShrink: 0,
+                background: '#FFFFFF',
+                zIndex: 10
+            }}>
+                {/* Storage Card - Relocated in removed FIN-PRO sidebar area */}
+                {!isSocialMode && !isFinanceMode && !isAdminMode && !isSalesAgentMode && (
+                    <div 
+                        onClick={() => setIsStorageModalOpen(true)}
+                        title="Click to view Storage Allocation & Breakdown"
+                        style={{
+                            width: '100%',
+                            backgroundColor: '#EFF6FF',
+                            borderRadius: '12px',
+                            padding: '0.75rem 0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            border: '1px solid #DBEAFE',
+                            boxSizing: 'border-box',
+                            flexShrink: 0,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#E0F2FE';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#EFF6FF';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                    >
+                        {/* Left Info Column */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                <Cloud size={18} color="#2563EB" strokeWidth={2.2} />
+                                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1E293B' }}>
+                                    {t('storage', 'Storage')}
+                                </span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: '500', color: '#475569' }}>
+                                {`${storageData.usedFormatted} of ${storageData.totalCapacityFormatted} used`}
+                            </div>
+                        </div>
+
+                        {/* Right Neat Circular Progress Ring with % Inside */}
+                        {(() => {
+                            const storagePercent = storageData.usedPercent || 0;
+                            const radius = 15;
+                            const circ = 2 * Math.PI * radius;
+                            const strokeDashoffset = circ * (1 - storagePercent / 100);
+
+                            return (
+                                <div style={{
+                                    position: 'relative',
+                                    width: '38px',
+                                    height: '38px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    <svg width="38" height="38" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
+                                        <circle
+                                            cx="18"
+                                            cy="18"
+                                            r={radius}
+                                            fill="none"
+                                            stroke="#DBEAFE"
+                                            strokeWidth="3"
+                                        />
+                                        <circle
+                                            cx="18"
+                                            cy="18"
+                                            r={radius}
+                                            fill="none"
+                                            stroke="#2563EB"
+                                            strokeWidth="3"
+                                            strokeDasharray={circ}
+                                            strokeDashoffset={strokeDashoffset}
+                                            strokeLinecap="round"
+                                            style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+                                        />
+                                    </svg>
+                                    <span style={{
+                                        position: 'absolute',
+                                        fontSize: '0.72rem',
+                                        fontWeight: '800',
+                                        color: '#2563EB'
+                                    }}>
+                                        {Math.round(storagePercent)}%
+                                    </span>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
+ 
+                {/* Dynamic Multi-Plan Subscription Status Card (Matching User Visual Specs) */}
+                {(!isAdminMode && !isSalesAgentMode) && (
+                    <div style={{ margin: '0.25rem 0' }}>
+                        <DynamicSubscriptionWidget
+                            activePlans={userSubscriptions}
+                            plans={userSubscriptions}
+                            user={user}
+                            selectedPlan={selectedPlan}
+                            planDaysRemaining={planDaysRemaining}
+                            onNavigate={() => handleItemClick('Subscription', '/subscription')}
+                        />
+                    </div>
+                )}
+
+
+                {/* Bottom Settings Block */}
+                <button
+                    onClick={() => handleItemClick('Settings', isAdminMode ? '/admin/settings' : '/settings')}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        background: '#FFFFFF',
+                        color: (location.pathname.includes('/settings') || location.pathname.includes('/customization')) ? (isAdminMode ? '#4F46E5' : '#1B6B3A') : '#334155',
+                        borderRadius: '10px',
+                        border: '1px solid #D8F3E5',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        transition: 'background 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#F9FBF9'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#FFFFFF'}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <SettingsIcon size={18} style={{ opacity: 0.8 }} />
+                        <span>{t('settings', 'Settings')}</span>
+                    </div>
+                    <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                </button>
+ 
+                {/* Help & Support Block */}
+                <button
+                    onClick={() => handleItemClick('Help & Support', isAdminMode ? '/admin/faq' : (isSalesAgentMode ? '/sales-portal/faq' : '/faq'))}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        background: '#FFFFFF',
+                        color: location.pathname.includes('/faq')
+                            ? (isAdminMode ? '#4F46E5' : (isSalesAgentMode ? '#EA580C' : '#1B6B3A'))
+                            : '#334155',
+                        borderRadius: '10px',
+                        border: '1px solid #D8F3E5',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        transition: 'background 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#F9FBF9'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#FFFFFF'}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <HelpCircle size={18} style={{ opacity: 0.8 }} />
+                        <span>{t('helpSupport', 'Help & Support')}</span>
+                    </div>
+                    <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                </button>
+            </div>
+
+            {/* Storage Allocation & Content Breakdown Modal */}
+            <AnimatePresence>
+                {isStorageModalOpen && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                            backdropFilter: 'blur(4px)',
+                            zIndex: 99999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '1rem'
+                        }}
+                        onClick={() => setIsStorageModalOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                backgroundColor: '#FFFFFF',
+                                borderRadius: '20px',
+                                width: '100%',
+                                maxWidth: '680px',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                border: '1px solid #E2E8F0',
+                                overflow: 'hidden',
+                                fontFamily: "'Inter', sans-serif"
+                            }}
+                        >
+                            {/* Modal Header */}
+                            <div style={{
+                                padding: '1.25rem 1.5rem',
+                                borderBottom: '1px solid #F1F5F9',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{
+                                        width: '42px',
+                                        height: '42px',
+                                        borderRadius: '12px',
+                                        backgroundColor: '#2563EB',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#FFFFFF',
+                                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                                    }}>
+                                        <Cloud size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#1E293B' }}>
+                                            Storage Allocation & Content
+                                        </h3>
+                                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748B', fontWeight: '500' }}>
+                                            Workspace Storage Breakdown ({`${storageData.usedFormatted} of ${storageData.totalCapacityFormatted} used`})
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setIsStorageModalOpen(false)}
+                                    style={{
+                                        background: '#FFFFFF',
+                                        border: '1px solid #CBD5E1',
+                                        borderRadius: '50%',
+                                        width: '32px',
+                                        height: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: '#64748B',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.color = '#0F172A'}
+                                    onMouseLeave={(e) => e.currentTarget.style.color = '#64748B'}
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '75vh', overflowY: 'auto' }}>
+                                {/* Summary Stat Cards */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                    <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Total Capacity</span>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{storageData.totalCapacityFormatted}</div>
+                                    </div>
+                                    <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#2563EB', textTransform: 'uppercase' }}>Used Storage</span>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#1E40AF', marginTop: '2px' }}>{`${storageData.usedFormatted} (${storageData.usedPercent}%)`}</div>
+                                    </div>
+                                    <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '0.85rem 1rem' }}>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#16A34A', textTransform: 'uppercase' }}>Free Available</span>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#15803D', marginTop: '2px' }}>{storageData.freeFormatted}</div>
+                                    </div>
+                                </div>
+
+                                {/* Multi-Color Segmented Storage Quota Distribution Bar */}
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.8rem', fontWeight: '700', color: '#475569' }}>
+                                        <span>Module Storage Quota Distribution</span>
+                                        <span>100% Allocated</span>
+                                    </div>
+                                    <div style={{ display: 'flex', height: '10px', width: '100%', borderRadius: '999px', overflow: 'hidden', backgroundColor: '#E2E8F0' }}>
+                                        {storageData.moduleBreakdown.map((item, idx) => (
+                                            <div key={idx} style={{ width: `${item.sharePercent}%`, backgroundColor: item.color }} title={`${item.module}: ${item.share}`} />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Table Requested by User */}
+                                <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: '750', color: '#475569' }}>Module</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: '750', color: '#475569', textAlign: 'center' }}>Typical Storage Share</th>
+                                                <th style={{ padding: '0.75rem 1rem', fontWeight: '750', color: '#475569' }}>Main File Types</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {storageData.moduleBreakdown.map((item, idx) => (
+                                                <tr key={idx} style={{ borderBottom: idx < storageData.moduleBreakdown.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                                                    <td style={{ padding: '0.75rem 1rem', fontWeight: '700', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color, display: 'inline-block' }} />
+                                                        {item.module}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                                                        <span style={{ backgroundColor: item.badgeBg, color: item.color, padding: '2px 8px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '800', border: `1px solid ${item.color}33` }}>
+                                                            {item.share}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem 1rem', color: '#64748B', fontWeight: '500' }}>
+                                                        {item.files}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div style={{
+                                padding: '1rem 1.5rem',
+                                borderTop: '1px solid #F1F5F9',
+                                backgroundColor: '#F8FAFC',
+                                display: 'flex',
+                                justifyContent: 'flex-end'
+                            }}>
+                                <button
+                                    onClick={() => setIsStorageModalOpen(false)}
+                                    style={{
+                                        padding: '0.55rem 1.25rem',
+                                        backgroundColor: '#2563EB',
+                                        color: '#FFFFFF',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        fontWeight: '750',
+                                        fontSize: '0.85rem',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 6px rgba(37, 99, 235, 0.2)'
+                                    }}
+                                >
+                                    Close Breakdown
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </aside>
+    );
+};
+
+export default Sidebar;
