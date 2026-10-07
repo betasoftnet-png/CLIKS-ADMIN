@@ -1,14 +1,13 @@
-name: Build and Deploy CLIKS Business FE
+name: Build and Deploy CLIKS Admin FE
 
 on:
   push:
     branches:
       - main
-
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: ghcr.io/betasoftnet-png/cliks-business-fe
+  IMAGE_NAME: ghcr.io/betasoftnet-png/cliks-admin-fe
 
 jobs:
   build-and-deploy:
@@ -39,13 +38,6 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
           build-args: |
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
-            VITE_CALCULATOR_API_BASE_URL=${{ secrets.VITE_CALCULATOR_API_BASE_URL }}
-            VITE_CONTACT_API_BASE_URL=${{ secrets.VITE_CONTACT_API_BASE_URL }}
-            VITE_CALENDAR_API_BASE_URL=${{ secrets.VITE_CALENDAR_API_BASE_URL }}
-            VITE_NOTES_API_BASE_URL=${{ secrets.VITE_NOTES_API_BASE_URL }}
-            VITE_OPEN_METEO_API=${{ secrets.VITE_OPEN_METEO_API }}
-            VITE_BIGDATA_CLOUD_API=${{ secrets.VITE_BIGDATA_CLOUD_API }}
-            VITE_API_SUB_BASE_URL=${{ secrets.VITE_API_SUB_BASE_URL }}
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
@@ -59,7 +51,7 @@ jobs:
           script: |
             set -e
 
-            cd /var/www/CLIKS-BUS-FE
+            cd /var/www/CLIKS-ADMIN
 
             echo "Logging in to GHCR..."
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u betasoftnet-png --password-stdin
@@ -71,6 +63,6 @@ jobs:
             docker compose up -d --force-recreate
 
             echo "Checking container..."
-            docker ps --filter name=cliks-business-fe
+            docker ps --filter name=cliks-admin-fe
 
             echo "Deployment completed successfully."

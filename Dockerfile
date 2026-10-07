@@ -1,9 +1,9 @@
-# Stage 1: Build the static assets
+# Stage 1: Build the Vite React application
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Vite build-time variables
+# Vite build-time environment variable
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
@@ -11,22 +11,24 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 COPY package*.json ./
 RUN npm ci
 
-# Copy source code
+# Copy application source
 COPY . .
 
-# Build frontend
+# Build production files
 RUN npm run build
 
 
-# Stage 2: Serve using Nginx
-FROM nginx:alpine AS runner
+# Stage 2: Serve the production build with Nginx
+FROM nginx:alpine
 
 WORKDIR /usr/share/nginx/html
 
 RUN rm -rf ./*
 
+# Custom Nginx configuration
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
+# Copy Vite production build
 COPY --from=builder /app/dist .
 
 EXPOSE 80

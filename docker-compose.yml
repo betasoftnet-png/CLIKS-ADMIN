@@ -1,7 +1,7 @@
 services:
-  cliks-business-fe:
-    image: ghcr.io/betasoftnet-png/cliks-business-fe:latest
-    container_name: cliks-business-fe
+  cliks-admin-fe:
+    image: ghcr.io/betasoftnet-png/cliks-admin-fe:latest
+    container_name: cliks-admin-fe
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3101:80"
+      - "127.0.0.1:3108:80"
