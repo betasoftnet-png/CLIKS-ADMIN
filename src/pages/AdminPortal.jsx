@@ -53,8 +53,8 @@ export default function AdminPortal() {
         return Boolean(token && (role === 'admin' || localStorage.getItem('is_master_admin') === 'true'));
     });
 
-    const [adminEmail, setAdminEmail] = useState('santhoshhhhhhh@bnxmail.com');
-    const [adminPassword, setAdminPassword] = useState('1234');
+    const [adminEmail, setAdminEmail] = useState('');
+    const [adminPassword, setAdminPassword] = useState('');
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginError, setLoginError] = useState('');
 
@@ -1118,11 +1118,11 @@ export default function AdminPortal() {
                             fontWeight: '800',
                             fontSize: '0.8rem'
                         }}>
-                            SA
+                            {user?.name ? user.name.substring(0, 2).toUpperCase() : 'AD'}
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: '800' }}>Santhosh Admin</div>
-                            <div style={{ fontSize: '0.68rem', color: '#94A3B8' }}>santhoshhhhhhh@bnxmail.com</div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '800' }}>{user?.name || 'Admin'}</div>
+                            <div style={{ fontSize: '0.68rem', color: '#94A3B8' }}>{user?.email || 'admin@cliksbusiness.com'}</div>
                         </div>
                     </div>
 
