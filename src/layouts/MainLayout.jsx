@@ -181,39 +181,7 @@ const MainLayout = ({ children }) => {
                             {activePanel === 'Calculator' && (
                                 <CalcPopover isInline={true} onCloseInline={() => setActivePanel(null)} />
                             )}
-                            {activePanel === 'Beta Products' && (
-                                <ProductLauncher onClose={() => setActivePanel(null)} />
-                            )}
-                            {activePanel === 'Calendar' && (
-                                <DockedPanelWrapper title="Calendar" onClose={() => setActivePanel(null)}>
-                                    <CalendarPanel />
-                                </DockedPanelWrapper>
-                            )}
-                            {activePanel === 'Contact' && (
-                                <DockedPanelWrapper title="Global Contacts" onClose={() => setActivePanel(null)}>
-                                    <ContactPanel />
-                                </DockedPanelWrapper>
-                            )}
-                            {activePanel === 'Notes' && (
-                                <DockedPanelWrapper title="Notes" onClose={() => setActivePanel(null)}>
-                                    <NotesPanel />
-                                </DockedPanelWrapper>
-                            )}
-                            {activePanel === 'Beta Trust' && (
-                                <DockedPanelWrapper title="Beta Trust" onClose={() => setActivePanel(null)}>
-                                    <BusinessPlaceholder title="Beta Trust" />
-                                </DockedPanelWrapper>
-                            )}
-                            {activePanel === 'Weather' && (
-                                <DockedPanelWrapper title="Weather" onClose={() => setActivePanel(null)}>
-                                    <WeatherPanel />
-                                </DockedPanelWrapper>
-                            )}
-                            {!['Calculator', 'Beta Products', 'Calendar', 'Contact', 'Beta Trust', 'Notes', 'Weather'].includes(activePanel) && (
-                                <DockedPanelWrapper title={activePanel} onClose={() => setActivePanel(null)}>
-                                    <BusinessPlaceholder title={activePanel} />
-                                </DockedPanelWrapper>
-                            )}
+
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -221,8 +189,7 @@ const MainLayout = ({ children }) => {
                 {/* Audit Side Panel */}
                 <AuditPanel isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
                 
-                {/* Referral Program Pop-up Modal */}
-                <ReferralModal isOpen={isReferralOpen} onClose={() => setIsReferralOpen(false)} />
+
             </div>
         </div>
     );
