@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }) => {
 
         const existingSubs = user?.active_subscriptions || {
             business: { active: true, plan: user?.tier || 'Starter Plan' },
-            fin_pro: { active: Boolean(localStorage.getItem('cliks_finpro_active') === 'true'), plan: null },
+            fin_pro: { active: Boolean(user?.active_subscriptions?.fin_pro?.active), plan: null },
             investor: { active: false, plan: null },
             poster: { active: false, plan: null }
         };
@@ -168,8 +168,6 @@ export const AuthProvider = ({ children }) => {
                 updated_at: now.toISOString()
             }
         };
-
-        if (cat === 'fin_pro') localStorage.setItem('cliks_finpro_active', 'true');
         try {
             localStorage.removeItem('cliks_investor_active');
             localStorage.removeItem('cliks_poster_active');

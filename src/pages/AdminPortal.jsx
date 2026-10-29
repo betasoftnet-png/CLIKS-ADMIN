@@ -405,14 +405,14 @@ export default function AdminPortal() {
                 setPitchesList(defaultPitches);
             }
 
-            // 3. CA Directory Seed
-            let localSubmission = null;
+            // 3. CA Directory Fetch from Central Database (No localStorage)
+            let dbVerifications = [];
             try {
-                const savedIcai = localStorage.getItem('cliks_icai_verification');
-                if (savedIcai) {
-                    localSubmission = JSON.parse(savedIcai);
-                }
-            } catch (e) {}
+                const caRes = await adminService.getCaVerifications();
+                dbVerifications = Array.isArray(caRes) ? caRes : (Array.isArray(caRes?.data) ? caRes.data : []);
+            } catch (err) {
+                console.error('Failed to fetch CA verifications from DB:', err);
+            }
 
             const baseCaSeed = [
                 {
@@ -487,32 +487,23 @@ export default function AdminPortal() {
                 }
             ];
 
-            if (localSubmission && (localSubmission.fullName || localSubmission.membershipNo)) {
-                const mapStatus = {
-                    'VERIFIED': 'Verified & Active',
-                    'REJECTED': 'Rejected',
-                    'PENDING_REVIEW': 'Pending Review',
-                    'UNVERIFIED': 'Pending Review'
-                };
-                const formattedUserCa = {
-                    id: 'usr-ca-submission',
-                    fullName: localSubmission.fullName || 'CA Applicant',
-                    firmName: localSubmission.firmName || 'Practice Applicant',
-                    membershipNo: localSubmission.membershipNo || 'ICAI Pending',
-                    email: localSubmission.email || user?.email || 'applicant@cliksca.com',
-                    clientsCount: 0,
-                    tier: 'FIN-PRO Solo (Pending Verification)',
-                    status: mapStatus[localSubmission.status] || 'Pending Review',
-                    phone: '+91 98765 43210',
-                    copStatus: localSubmission.copStatus || 'Holding COP (Full-Time)',
-                    region: localSubmission.region || 'Southern India Regional Council (SIRC)',
-                    address: localSubmission.address || 'Registered Office Address',
-                    isUserSubmission: true
-                };
-                setCaList([formattedUserCa, ...baseCaSeed]);
-            } else {
-                setCaList(baseCaSeed);
-            }
+            const mappedDbCas = dbVerifications.map(v => ({
+                id: v.id,
+                fullName: v.full_name || 'Chartered Accountant',
+                firmName: v.firm_name || 'Practice Member',
+                membershipNo: `ICAI #${v.membership_no}`,
+                email: v.email || v.user_email || 'ca@cliksca.com',
+                clientsCount: 0,
+                tier: 'FIN-PRO Advisory Suite',
+                status: v.status === 'VERIFIED' ? 'Verified & Active' : (v.status === 'REJECTED' ? 'Rejected' : 'Pending Review'),
+                phone: '+91 98765 43210',
+                copStatus: v.cop_status || 'Holding COP (Full-Time)',
+                region: v.region || 'Southern India Regional Council (SIRC)',
+                address: v.address || 'Registered Practice Office',
+                isDbRecord: true
+            }));
+
+            setCaList([...mappedDbCas, ...baseCaSeed]);
 
             // 4. Support Tickets Seed
             let apiTickets = [];
@@ -779,7 +770,13 @@ export default function AdminPortal() {
         alert(`Ticket ${ticketId} status updated to: ${newStatus}`);
     };
 
-    const handleVerifyCa = (caId) => {
+    const handleVerifyCa = async (caId) => {
+        try {
+            await adminService.updateCaVerificationStatus(caId, 'VERIFIED');
+        } catch (e) {
+            console.error('API verify failed:', e);
+        }
+
         setCaList(prev => prev.map(ca => {
             if (ca.id === caId) {
                 return { ...ca, status: 'Verified & Active' };
@@ -787,26 +784,20 @@ export default function AdminPortal() {
             return ca;
         }));
 
-        // Persist to user's local storage for cross-page synchronization
-        try {
-            const saved = localStorage.getItem('cliks_icai_verification');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                parsed.status = 'VERIFIED';
-                localStorage.setItem('cliks_icai_verification', JSON.stringify(parsed));
-            }
-        } catch (e) {}
-        localStorage.setItem('cliks_ca_verification_status', 'VERIFIED');
-        window.dispatchEvent(new Event('storage'));
-
         if (selectedCaDetails && selectedCaDetails.id === caId) {
             setSelectedCaDetails(prev => ({ ...prev, status: 'Verified & Active' }));
         }
 
-        alert('ICAI Credentials Officially Verified! Access to FIN-PRO advisory suite and subscription unlocked.');
+        alert('ICAI Credentials Officially Verified in Central Database! Access to FIN-PRO advisory suite and subscription unlocked.');
     };
 
-    const handleRejectCa = (caId) => {
+    const handleRejectCa = async (caId) => {
+        try {
+            await adminService.updateCaVerificationStatus(caId, 'REJECTED');
+        } catch (e) {
+            console.error('API reject failed:', e);
+        }
+
         setCaList(prev => prev.map(ca => {
             if (ca.id === caId) {
                 return { ...ca, status: 'Rejected' };
@@ -814,22 +805,11 @@ export default function AdminPortal() {
             return ca;
         }));
 
-        try {
-            const saved = localStorage.getItem('cliks_icai_verification');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                parsed.status = 'REJECTED';
-                localStorage.setItem('cliks_icai_verification', JSON.stringify(parsed));
-            }
-        } catch (e) {}
-        localStorage.setItem('cliks_ca_verification_status', 'REJECTED');
-        window.dispatchEvent(new Event('storage'));
-
         if (selectedCaDetails && selectedCaDetails.id === caId) {
             setSelectedCaDetails(prev => ({ ...prev, status: 'Rejected' }));
         }
 
-        alert('ICAI Verification Rejected. Applicant can modify details and re-submit.');
+        alert('ICAI Verification Marked as Rejected in Central Database.');
     };
 
     const handleToggleCaVerification = (caId) => {

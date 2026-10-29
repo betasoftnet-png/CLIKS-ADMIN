@@ -114,6 +114,16 @@ export const adminService = {
     getActiveAnnouncement: async () => {
         const res = await apiClient.get('/public/announcement');
         return res.data;
+    },
+
+    // CA Verification Directory & Audit
+    getCaVerifications: async () => {
+        const res = await apiClient.get('/admin/ca-verifications');
+        return res.data?.data || res.data;
+    },
+    updateCaVerificationStatus: async (id, status, rejectionReason) => {
+        const res = await apiClient.put(`/admin/ca-verifications/${id}/status`, { status, rejectionReason });
+        return res.data?.data || res.data;
     }
 };
 
