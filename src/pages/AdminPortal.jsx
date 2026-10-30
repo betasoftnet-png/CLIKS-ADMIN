@@ -424,7 +424,13 @@ export default function AdminPortal() {
             let dbVerifications = [];
             try {
                 const caRes = await adminService.getCaVerifications();
-                dbVerifications = Array.isArray(caRes) ? caRes : (Array.isArray(caRes?.data) ? caRes.data : []);
+                if (Array.isArray(caRes)) {
+                    dbVerifications = caRes;
+                } else if (Array.isArray(caRes?.data)) {
+                    dbVerifications = caRes.data;
+                } else if (Array.isArray(caRes?.data?.data)) {
+                    dbVerifications = caRes.data.data;
+                }
             } catch (err) {
                 console.error('Failed to fetch CA verifications from DB:', err);
             }
@@ -506,18 +512,20 @@ export default function AdminPortal() {
                 id: v.id,
                 fullName: v.full_name || 'Chartered Accountant',
                 firmName: v.firm_name || 'Practice Member',
-                membershipNo: `ICAI #${v.membership_no}`,
+                membershipNo: v.membership_no ? (String(v.membership_no).startsWith('ICAI') ? v.membership_no : `ICAI #${v.membership_no}`) : 'ICAI #Pending',
                 email: v.email || v.user_email || 'ca@cliksca.com',
                 clientsCount: 0,
                 tier: 'FIN-PRO Advisory Suite',
                 status: v.status === 'VERIFIED' ? 'Verified & Active' : (v.status === 'REJECTED' ? 'Rejected' : 'Pending Review'),
-                phone: '+91 98765 43210',
+                phone: v.phone || '+91 98765 43210',
                 copStatus: v.cop_status || 'Holding COP (Full-Time)',
+                associateFellow: v.associate_fellow || 'Associate Member (ACA)',
                 region: v.region || 'Southern India Regional Council (SIRC)',
                 address: v.address || 'Registered Practice Office',
                 isDbRecord: true
             }));
 
+            // Place pending and DB submissions at top of directory
             setCaList([...mappedDbCas, ...baseCaSeed]);
 
             // 4. Support Tickets Seed

@@ -151,15 +151,11 @@ async function request(endpoint, options = {}) {
     let response;
     try {
         const token = localStorage.getItem('books_auth_token') || localStorage.getItem('adminToken');
-        const isMockToken = token === 'mock-test-token' || (typeof token === 'string' && token.startsWith('master_admin_session_token_'));
-        if (isMockToken && !endpoint.includes('/storage')) {
+        const isMockToken = token === 'mock-test-token';
+        if (isMockToken && !endpoint.includes('/storage') && !endpoint.includes('/admin/ca-verifications')) {
             console.log(`[ApiClient] Mock mode for: ${endpoint}`);
             if (endpoint.includes('/presence')) return { success: true, data: {} };
             if (endpoint.includes('/notifications')) return { success: true, data: [] };
-            if (endpoint.includes('/admin/users') || endpoint.includes('/users')) return { success: true, data: [] };
-            if (endpoint.includes('/admin/ca-verifications') || endpoint.includes('/ca/')) return { success: true, data: [] };
-            if (endpoint.includes('/admin/support') || endpoint.includes('/tickets')) return { success: true, data: [] };
-            if (endpoint.includes('/pitches')) return { success: true, data: [] };
             if (endpoint.includes('/business-plans')) return { success: true, data: [] };
             if (endpoint.includes('/profile')) return { 
                 success: true, 

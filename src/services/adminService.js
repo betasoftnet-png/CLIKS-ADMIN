@@ -119,11 +119,14 @@ export const adminService = {
     // CA Verification Directory & Audit
     getCaVerifications: async () => {
         const res = await apiClient.get('/admin/ca-verifications');
-        return res.data?.data || res.data;
+        if (Array.isArray(res)) return res;
+        if (Array.isArray(res?.data)) return res.data;
+        if (Array.isArray(res?.data?.data)) return res.data.data;
+        return res?.data || [];
     },
     updateCaVerificationStatus: async (id, status, rejectionReason) => {
         const res = await apiClient.put(`/admin/ca-verifications/${id}/status`, { status, rejectionReason });
-        return res.data?.data || res.data;
+        return res?.data?.data || res?.data || res;
     }
 };
 
