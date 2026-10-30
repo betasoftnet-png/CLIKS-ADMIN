@@ -54,10 +54,26 @@ export const caService = {
     markAllNotificationsRead: () => apiClient.put('/notifications/read-all').then(res => res.data.data || res.data),
 
     // Presence API
-    getPresenceStatus: (userId) => apiClient.get(`/ca/presence${userId ? `?userId=${userId}&user_id=${userId}` : ''}`).then(res => res.data?.data || res.data).catch(() => null),
-    setUserOnline: () => apiClient.post('/presence/login').then(res => res.data?.data || res.data).catch(() => null),
-    setUserOffline: () => apiClient.post('/presence/logout').then(res => res.data?.data || res.data).catch(() => null),
-    updatePresenceHeartbeat: () => apiClient.post('/presence/heartbeat').then(res => res.data?.data || res.data).catch(() => null),
+    getPresenceStatus: (userId) => {
+        const token = localStorage.getItem('books_auth_token') || localStorage.getItem('adminToken');
+        if (!token || token === 'mock-test-token' || token.startsWith('master_admin_session_token_')) return Promise.resolve(null);
+        return apiClient.get(`/ca/presence${userId ? `?userId=${userId}&user_id=${userId}` : ''}`).then(res => res.data?.data || res.data).catch(() => null);
+    },
+    setUserOnline: () => {
+        const token = localStorage.getItem('books_auth_token') || localStorage.getItem('adminToken');
+        if (!token || token === 'mock-test-token' || token.startsWith('master_admin_session_token_')) return Promise.resolve(null);
+        return apiClient.post('/presence/login').then(res => res.data?.data || res.data).catch(() => null);
+    },
+    setUserOffline: () => {
+        const token = localStorage.getItem('books_auth_token') || localStorage.getItem('adminToken');
+        if (!token || token === 'mock-test-token' || token.startsWith('master_admin_session_token_')) return Promise.resolve(null);
+        return apiClient.post('/presence/logout').then(res => res.data?.data || res.data).catch(() => null);
+    },
+    updatePresenceHeartbeat: () => {
+        const token = localStorage.getItem('books_auth_token') || localStorage.getItem('adminToken');
+        if (!token || token === 'mock-test-token' || token.startsWith('master_admin_session_token_')) return Promise.resolve(null);
+        return apiClient.post('/presence/heartbeat').then(res => res.data?.data || res.data).catch(() => null);
+    },
 
     // GST Credentials API
     getGstCredentials: () => apiClient.get('/gst-credentials').then(res => res.data.data || res.data),

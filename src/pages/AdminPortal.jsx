@@ -44,7 +44,7 @@ import { calculateDaysRemaining } from '../utils/subscriptionUtils';
 
 export default function AdminPortal() {
     const navigate = useNavigate();
-    const { user, adminLogin } = useAuth();
+    const { user, adminLogin, logout: contextLogout } = useAuth();
 
     // ── Authentication State ──────────────────────────────────────────────────
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -52,6 +52,14 @@ export default function AdminPortal() {
         const role = user?.role?.toLowerCase();
         return Boolean(token && (role === 'admin' || localStorage.getItem('is_master_admin') === 'true'));
     });
+
+    useEffect(() => {
+        const handleUnauthorized = () => {
+            setIsAuthenticated(false);
+        };
+        window.addEventListener('auth:unauthorized', handleUnauthorized);
+        return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    }, []);
 
     const [adminEmail, setAdminEmail] = useState('');
     const [adminPassword, setAdminPassword] = useState('');
@@ -150,11 +158,18 @@ export default function AdminPortal() {
     const handleLogout = () => {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('is_master_admin');
+        localStorage.removeItem('books_auth_token');
         setIsAuthenticated(false);
+        if (contextLogout) contextLogout();
     };
 
     // ── 2. SEED & FETCH COMPONENT DATA ─────────────────────────────────────────
     const loadPlatformData = async () => {
+        const token = localStorage.getItem('adminToken') || localStorage.getItem('books_auth_token');
+        if (!token || !isAuthenticated) {
+            setRefreshing(false);
+            return;
+        }
         setRefreshing(true);
         try {
             // 1. Fetch Users

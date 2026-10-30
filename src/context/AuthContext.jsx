@@ -14,15 +14,25 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(!!token);
     const [planDaysRemaining, setPlanDaysRemaining] = useState(342);
     const queryClient = useQueryClient();
+    const isLoggingOutRef = React.useRef(false);
 
     const logout = React.useCallback(() => {
-        caService.setUserOffline().catch(() => {});
+        if (isLoggingOutRef.current) return;
+        isLoggingOutRef.current = true;
+
+        const currentToken = localStorage.getItem('books_auth_token') || localStorage.getItem('adminToken') || localStorage.getItem('bnx_auth_token');
+        if (currentToken && currentToken !== 'mock-test-token' && !currentToken.startsWith('master_admin_session_token_')) {
+            caService.setUserOffline().catch(() => {});
+        }
+
         localStorage.removeItem('books_auth_token');
         localStorage.removeItem('bnx_auth_token');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('is_master_admin');
         
         // Clear all local storage keys to prevent data leakage across accounts
         Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('cliks_') || key.startsWith('books_')) {
+            if (key.startsWith('cliks_') || key.startsWith('books_') || key.startsWith('admin')) {
                 localStorage.removeItem(key);
             }
         });
@@ -31,6 +41,10 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         // Clear query cache to prevent User B from seeing User A's cached data
         queryClient.clear();
+
+        setTimeout(() => {
+            isLoggingOutRef.current = false;
+        }, 1000);
     }, [queryClient]);
 
     useEffect(() => {
@@ -39,18 +53,18 @@ export const AuthProvider = ({ children }) => {
                 setLoading(false);
                 return;
             }
-            if (token === 'mock-test-token') {
+            if (token === 'mock-test-token' || (typeof token === 'string' && token.startsWith('master_admin_session_token_'))) {
                 const now = new Date();
                 const mockExpiry = new Date(now.getTime() + 342 * 24 * 60 * 60 * 1000).toISOString();
                 setUser({
-                    id: 'mock-id',
-                    name: 'Test User',
-                    email: 'test@example.com',
-                    role: 'business',
-                    tier: 'Free Plan',
+                    id: 'master-admin',
+                    name: 'Super Admin',
+                    email: 'santhoshhhhhhh@bnxmail.com',
+                    role: 'admin',
+                    tier: 'Elite Suite',
                     subscription_days_remaining: 342,
                     active_subscriptions: {
-                        business: { active: true, plan: 'Starter Plan', startDate: now.toISOString(), expiryDate: mockExpiry, valid_until: mockExpiry }
+                        business: { active: true, plan: 'Elite Suite', startDate: now.toISOString(), expiryDate: mockExpiry, valid_until: mockExpiry }
                     }
                 });
                 setLoading(false);
@@ -86,8 +100,8 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const handleStorageChange = (e) => {
-            if (!e.key || e.key === 'books_auth_token' || e.key === 'bnx_auth_token') {
-                console.warn('[AuthContext] Auth session changed or switched in another tab. Logging out this tab.');
+            if ((e.key === 'books_auth_token' || e.key === 'bnx_auth_token' || e.key === 'adminToken') && e.newValue !== e.oldValue && !e.newValue) {
+                console.warn('[AuthContext] Auth session cleared in another tab. Logging out this tab.');
                 logout();
             }
         };
@@ -121,7 +135,8 @@ export const AuthProvider = ({ children }) => {
     }, [user]);
 
     useEffect(() => {
-        if (user && token) {
+        const isMockToken = token === 'mock-test-token' || (typeof token === 'string' && token.startsWith('master_admin_session_token_'));
+        if (user && token && !isMockToken) {
             caService.setUserOnline().catch(() => {});
             const heartbeatTimer = setInterval(() => {
                 caService.updatePresenceHeartbeat().catch(() => {});
